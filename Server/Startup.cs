@@ -48,6 +48,8 @@ namespace Medieval.Server
             
             services.AddAutoMapper(typeof(Startup));
             
+            services.AddScoped<IImageUploadRepository, ImageUploadRepository>();
+
             services.AddControllersWithViews();
             services.AddRazorPages();
         }

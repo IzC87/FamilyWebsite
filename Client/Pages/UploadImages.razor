@@ -1,0 +1,81 @@
+﻿@page "/uploadimages"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Medieval.Shared
+@attribute [Authorize]
+@inject HttpClient Http
+
+<div>
+    <div class="row">
+        <InputFile class="btn btn-primary" OnChange="@OnFileSelection" multiple></InputFile>
+        
+        @if (imgUrls.Count > 0 || imageData.Count > 0)
+        {
+            <button type="button" class="btn btn-primary margin-left" @onclick="SaveToServer">Ladda upp bilderna!</button>
+        }
+    </div>
+
+    <div class="row">
+        @foreach (var imgUrl in imgUrls)
+        {
+            <div class="card" style="width: 18rem;">
+                <div class="card-body">
+                    <img class="card-img-top" src="@imgUrl">
+                </div>
+            </div>
+        }
+    </div>
+
+    <div>
+        @if (uploadedStatus != "")
+        {
+            <a>
+                @uploadedStatus
+            </a>
+        }
+    </div>
+</div>
+
+@code{
+    List<string> imgUrls = new List<string>();
+    List<ImageData> imageData = new List<ImageData>();
+
+    string uploadedStatus;
+
+    private async Task OnFileSelection(InputFileChangeEventArgs e)
+    {
+        uploadedStatus = "";
+        foreach (IBrowserFile imgFile in e.GetMultipleFiles())
+        {
+            var buffers = new byte[imgFile.Size];
+            await imgFile.OpenReadStream().ReadAsync(buffers);
+            string imageType = imgFile.ContentType;
+            string imgUrl = $"data:{imageType};base64,{Convert.ToBase64String(buffers)}";
+            imgUrls.Add(imgUrl);
+
+            imageData.Add(new ImageData
+            {
+                Data = buffers,
+                FileType = imageType,
+                Size = imgFile.Size
+            });
+        }
+    }
+
+    private async Task SaveToServer()
+    {
+        if (imageData.Count > 0)
+        {
+            var payload = new ImageUploadModel { Images = imageData };
+            var temp = await Http.PostAsJsonAsync("/api/v1.0/ImageUpload/saveimage", payload);
+            if (temp.IsSuccessStatusCode)
+            {
+                imgUrls = new List<string>();
+                imageData = new List<ImageData>();
+                
+                uploadedStatus = "Success!";
+            }
+        }
+
+    }
+}
